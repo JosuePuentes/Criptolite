@@ -19,7 +19,7 @@ if (!isset($_SESSION['user_id'])) {
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background: url('/inver/img/fondo.jpg') no-repeat center center fixed;
+    background: url('/img/fondo.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
     min-height: 100vh;
@@ -211,16 +211,16 @@ function seleccionarBanco(banco) {
 
     let red = '';
     if (banco === 'usdt') {
-        qrImagen.src = '/inver/img/usdt.jpg';
+        qrImagen.src = '/img/usdt.jpg';
         red = 'RED (TR20)';
     } else if (banco === 'btc') {
-        qrImagen.src = '/inver/img/btc.jpg';
+        qrImagen.src = '/img/btc.jpg';
         red = 'RED (BTC)';
     } else if (banco === 'bnb') {
-        qrImagen.src = '/inver/img/bnb.jpg';
+        qrImagen.src = '/img/bnb.jpg';
         red = 'RED (BEP20)';
     } else if (banco === 'eth') {
-        qrImagen.src = '/inver/img/eth.jpg';
+        qrImagen.src = '/img/eth.jpg';
         red = 'RED (ERC20)';
     }
 

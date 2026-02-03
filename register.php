@@ -53,7 +53,7 @@ body {
     font-family: 'Arial', sans-serif;
 
     /* ✅ Fondo con imagen activa */
-    background: url('/inver/img/fondo.jpg') no-repeat center center fixed;
+    background: url('/img/fondo.jpg') no-repeat center center fixed;
     background-size: cover;
 
     color: white;

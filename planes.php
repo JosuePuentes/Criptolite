@@ -59,7 +59,7 @@ $planes_activos = $db->compras->find(['user_id' => $user_id, 'activo' => 1]);
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background: url('/inver/img/fondo.jpg') no-repeat center center fixed;
+    background: url('/img/fondo.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
     min-height: 100vh;

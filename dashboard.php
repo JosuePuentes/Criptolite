@@ -30,7 +30,7 @@ $disponible = $user['saldo_disponible'] ?? 0;
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background: url('/inver/img/fondo.jpg') no-repeat center center fixed;
+    background: url('/img/fondo.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
     min-height: 100vh;
@@ -246,11 +246,11 @@ h1 {
     <div class="slider" id="slider">
         <button class="slider-arrow" id="prevBtn">&#10094;</button>
         <div class="slides" id="slides">
-            <img src="/inver/img/1.png" alt="Imagen 1">
-            <img src="/inver/img/1.png" alt="Imagen 2">
-            <img src="/inver/img/1.png" alt="Imagen 3">
-            <img src="/inver/img/1.png" alt="Imagen 4">
-            <img src="/inver/img/1.png" alt="Imagen 5">
+            <img src="/img/1.png" alt="Imagen 1">
+            <img src="/img/1.png" alt="Imagen 2">
+            <img src="/img/1.png" alt="Imagen 3">
+            <img src="/img/1.png" alt="Imagen 4">
+            <img src="/img/1.png" alt="Imagen 5">
         </div>
         <button class="slider-arrow" id="nextBtn">&#10095;</button>
     </div>

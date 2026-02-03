@@ -38,7 +38,7 @@ body {
     font-family: 'Arial', sans-serif;
 
     /* ✅ Fondo con imagen activa */
-    background: url('/inver/img/fondologin.jpg') no-repeat center center fixed;
+    background: url('/img/fondologin.jpg') no-repeat center center fixed;
     background-size: cover;
 
     color: white;

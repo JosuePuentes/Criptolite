@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background: url('/inver/img/fondo.jpg') no-repeat center center fixed;
+    background: url('/img/fondo.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
     min-height: 100vh;
