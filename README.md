@@ -1,44 +1,52 @@
 # Criptolite
 
-App PHP con login, registro, dashboard, recargas y retiros. Base de datos MySQL.
+App PHP con login, registro, dashboard, recargas y retiros. **Base de datos: MongoDB (Atlas).**
 
-**Una sola aplicación**: no hay carpeta “frontend” ni “backend” separados. Todo el proyecto es un único servicio PHP; Render y Vercel usan la raíz del repo.
+**Una sola aplicación**: todo el proyecto es un único servicio PHP; Render y Vercel usan la raíz del repo.
+
+---
+
+## Requisitos
+
+- **PHP 8** con extensión `mongodb` (pecl) y **Composer**
+- **MongoDB Atlas** (gratis en [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas))
 
 ---
 
 ## Local
 
-1. **Base de datos**: Copia `db.example.php` como **`db.local.php`** y pon host, usuario, contraseña y nombre de la base.
-2. Servidor con PHP y MySQL (XAMPP, WAMP, etc.) y crea las tablas necesarias (p. ej. `users`).
+1. **MongoDB Atlas**: crea un cluster gratis en [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas), obtén la **Connection String**.
+2. **PHP 8** con extensión **mongodb** (`pecl install mongodb`) y **Composer** ([getcomposer.org](https://getcomposer.org)).
+3. En la raíz del proyecto:
+   ```bash
+   composer install
+   ```
+4. **Variable de entorno** (o crea `db.local.php` con la conexión):
+   - `MONGODB_URI` = `mongodb+srv://usuario:password@cluster.xxxxx.mongodb.net/criptolite?retryWrites=true&w=majority`
+5. Ejecuta la app (XAMPP, WAMP o `php -S localhost:8000`).
+
+Las colecciones (`users`, `recargas`, `retiros`, `planes_disponibles`, `compras`, `historial_ganancias`) se crean solas al usarlas. Puedes añadir un plan desde el panel admin.
 
 ---
 
 ## Desplegar en Render
 
-1. En [Render](https://render.com) crea un **Web Service** y enlaza el repo de GitHub.
-2. Elige **Docker** como runtime (usa el `Dockerfile` del repo).
-3. Crea una base **MySQL** en Render (o usa una externa) y en el servicio añade las variables de entorno:
-   - `DB_HOST`
-   - `DB_USER`
-   - `DB_PASS`
-   - `DB_NAME`
-4. Opcional: usa el **Blueprint** con el `render.yaml` del repo para definir el servicio.
+1. En [Render](https://render.com) crea un **Web Service** y enlaza el repo.
+2. Runtime: **Docker** (usa el `Dockerfile` del repo).
+3. Variables de entorno:
+   - `MONGODB_URI` = tu Connection String de MongoDB Atlas (incluye usuario, contraseña y nombre de base en la URL).
 
-No hace falta indicar “dónde está el frontend o el backend”: el `Dockerfile` y `render.yaml` ya apuntan a la raíz del proyecto.
+Opcional: **Blueprint** con `render.yaml` (ajusta las variables en el dashboard).
 
 ---
 
 ## Desplegar en Vercel
 
-1. En [Vercel](https://vercel.com) importa el repo de GitHub.
-2. Deja que use la configuración por defecto (lee `vercel.json`).
-3. En **Settings → Environment Variables** añade:
-   - `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`
-4. La base de datos debe ser accesible desde internet (p. ej. PlanetScale, Railway, o MySQL en Render).
-
-La raíz del proyecto es la app; `vercel.json` define qué archivos PHP se ejecutan y las rutas.
-
-**Nota:** En Vercel PHP corre en modo serverless; las sesiones pueden no persistir bien. Si el login falla, prioriza **Render** para esta app.
+1. En [Vercel](https://vercel.com) importa el repo.
+2. Variables de entorno: **`MONGODB_URI`** (Connection String de Atlas).
+3. **Importante**: el runtime PHP de Vercel puede no incluir la extensión `mongodb`. En ese caso:
+   - Ejecuta `composer install` en local y sube la carpeta `vendor/` al repo, o
+   - Usa **Render** para esta app (recomendado con MongoDB).
 
 ---
 

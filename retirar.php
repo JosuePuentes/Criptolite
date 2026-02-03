@@ -8,33 +8,37 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$user_id = intval($_SESSION['user_id']);
+$user_id = $_SESSION['user_id'];
+$user = $db->users->findOne(['_id' => _id($user_id)]);
+if (!$user) {
+    header("Location: index.php");
+    exit();
+}
+$saldo_disponible = $user['saldo_disponible'] ?? 0;
 
-// Obtener datos del usuario
-$user = $conn->query("SELECT nombre_completo, saldo_disponible, banco, cuenta_banco FROM users WHERE id = $user_id")->fetch_assoc();
-
-// Procesar solicitud de retiro
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $monto = floatval($_POST['monto']);
-    $banco = $conn->real_escape_string($_POST['banco']);
-    
-    if ($monto > 0 && $monto <= $user['saldo_disponible']) {
-        // Insertar retiro
-        $conn->query("INSERT INTO retiros (user_id, monto, banco, estado, fecha) 
-                      VALUES ($user_id, $monto, '$banco', 'pendiente', NOW())");
-        
-        // Descontar saldo disponible
-        $conn->query("UPDATE users SET saldo_disponible = saldo_disponible - $monto WHERE id = $user_id");
-        
+    $banco = trim($_POST['banco'] ?? '');
+
+    if ($monto > 0 && $monto <= $saldo_disponible) {
+        $db->retiros->insertOne([
+            'user_id' => $user_id,
+            'monto' => $monto,
+            'banco' => $banco,
+            'estado' => 'pendiente',
+            'fecha' => new MongoDB\BSON\UTCDateTime()
+        ]);
+        $db->users->updateOne(
+            ['_id' => _id($user_id)],
+            ['$inc' => ['saldo_disponible' => -$monto]]
+        );
         header("Location: retirar.php?success=1");
         exit();
-    } else {
-        $error = "Monto inválido o insuficiente.";
     }
+    $error = "Monto inválido o insuficiente.";
 }
 
-// Obtener historial de retiros
-$historial = $conn->query("SELECT * FROM retiros WHERE user_id = $user_id ORDER BY fecha DESC");
+$historial = $db->retiros->find(['user_id' => $user_id], ['sort' => ['fecha' => -1]]);
 ?>
 
 <!DOCTYPE html>
@@ -218,15 +222,19 @@ form button:hover {
         </tr>
     </thead>
     <tbody>
-        <?php while($row = $historial->fetch_assoc()): ?>
+        <?php foreach ($historial as $row):
+            $fechaStr = $row['fecha'] instanceof MongoDB\BSON\UTCDateTime
+                ? $row['fecha']->toDateTime()->format('d/m/Y H:i')
+                : (is_string($row['fecha'] ?? '') ? date('d/m/Y H:i', strtotime($row['fecha'])) : '');
+        ?>
             <tr class="fila-recarga">
-            <td><?= $row['id'] ?></td>
+            <td><?= substr((string)($row['_id'] ?? ''), -6) ?></td>
             <td>$<?= number_format($row['monto'], 0, ',', '.') ?></td>
-            <td><?= htmlspecialchars($row['banco']) ?></td>
-            <td class="estado-<?= strtolower($row['estado']) ?>"><?= ucfirst($row['estado']) ?></td>
-            <td><?= date('d/m/Y H:i', strtotime($row['fecha'])) ?></td>
+            <td><?= htmlspecialchars($row['banco'] ?? '') ?></td>
+            <td class="estado-<?= strtolower($row['estado'] ?? '') ?>"><?= ucfirst($row['estado'] ?? '') ?></td>
+            <td><?= $fechaStr ?></td>
         </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </tbody>
 </table>
 

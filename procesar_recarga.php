@@ -20,11 +20,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
-    // Insertar la recarga en estado 'pendiente'
-    $stmt = $conn->prepare("INSERT INTO recargas (user_id, monto, banco, referencia, estado, fecha) VALUES (?, ?, ?, ?, 'pendiente', NOW())");
-    $stmt->bind_param("iiss", $user_id, $monto, $banco, $referencia);
+    $db->recargas->insertOne([
+        'user_id' => $user_id,
+        'monto' => $monto,
+        'banco' => $banco,
+        'referencia' => $referencia,
+        'estado' => 'pendiente',
+        'fecha' => new MongoDB\BSON\UTCDateTime()
+    ]);
 
-    if ($stmt->execute()) {
+    if (true) {
         // Redirigir a recarga.php con mensaje de éxito
         header("Location: recarga.php?mensaje=recarga_enviada");
         exit();

@@ -1,37 +1,35 @@
 <?php
+include('db.php');
 
-include('db.php'); // solo incluimos la base de datos, sin sesión
-
-
-
-// Procesar acciones (igual que antes)
 if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
+    $id = $_GET['id'];
+    $oid = _id($id);
+    if (!$oid) { header("Location: admin.php"); exit(); }
 
     switch ($_GET['action']) {
         case 'aprobar':
-            $conn->query("UPDATE recargas SET estado = 'aprobado' WHERE id = $id");
-            $recarga = $conn->query("SELECT user_id, monto FROM recargas WHERE id = $id")->fetch_assoc();
-            if ($recarga) {
-                $user_id = intval($recarga['user_id']);
-                $monto = floatval($recarga['monto']);
-                $conn->query("UPDATE users SET saldo_capital = saldo_capital + $monto WHERE id = $user_id");
+            $recarga = $db->recargas->findOne(['_id' => $oid]);
+            if ($recarga && ($recarga['estado'] ?? '') === 'pendiente') {
+                $db->recargas->updateOne(['_id' => $oid], ['$set' => ['estado' => 'aprobado']]);
+                $uid = $recarga['user_id'];
+                $monto = (float)($recarga['monto'] ?? 0);
+                $db->users->updateOne(['_id' => _id($uid)], ['$inc' => ['saldo_capital' => $monto]]);
             }
             break;
         case 'eliminar':
-            $conn->query("DELETE FROM recargas WHERE id = $id");
+            $db->recargas->deleteOne(['_id' => $oid]);
             break;
         case 'aprobar_retiro':
-            $conn->query("UPDATE retiros SET estado = 'aprobado' WHERE id = $id");
+            $db->retiros->updateOne(['_id' => $oid], ['$set' => ['estado' => 'aprobado']]);
             break;
         case 'rechazar_retiro':
-            $retiro = $conn->query("SELECT user_id, monto FROM retiros WHERE id = $id")->fetch_assoc();
+            $retiro = $db->retiros->findOne(['_id' => $oid]);
             if ($retiro) {
-                $user_id = intval($retiro['user_id']);
-                $monto = floatval($retiro['monto']);
-                $conn->query("UPDATE users SET saldo_disponible = saldo_disponible + $monto WHERE id = $user_id");
+                $uid = $retiro['user_id'];
+                $monto = (float)($retiro['monto'] ?? 0);
+                $db->users->updateOne(['_id' => _id($uid)], ['$inc' => ['saldo_disponible' => $monto]]);
             }
-            $conn->query("UPDATE retiros SET estado = 'rechazado' WHERE id = $id");
+            $db->retiros->updateOne(['_id' => $oid], ['$set' => ['estado' => 'rechazado']]);
             break;
     }
     header("Location: admin.php");
@@ -123,23 +121,27 @@ input, select {
         </thead>
         <tbody>
             <?php
-            $resultado = $conn->query("SELECT r.*, u.nombre_completo, u.correo 
-                                       FROM recargas r 
-                                       JOIN users u ON r.user_id = u.id 
-                                       WHERE r.estado = 'pendiente' ORDER BY r.fecha DESC");
-            while($row = $resultado->fetch_assoc()) {
+            $recargas = $db->recargas->find(['estado' => 'pendiente'], ['sort' => ['fecha' => -1]]);
+            foreach ($recargas as $row) {
+                $u = $db->users->findOne(['_id' => _id($row['user_id'])]);
+                $nombre = $u ? ($u['nombre_completo'] ?? '') : '';
+                $correo = $u ? ($u['correo'] ?? '') : '';
+                $rid = (string)$row['_id'];
+                $fechaStr = $row['fecha'] instanceof MongoDB\BSON\UTCDateTime
+                    ? $row['fecha']->toDateTime()->format('d/m/Y H:i')
+                    : (is_string($row['fecha'] ?? '') ? date('d/m/Y H:i', strtotime($row['fecha'])) : '');
                 echo "<tr>
-                        <td>{$row['id']}</td>
-                        <td>" . htmlspecialchars($row['nombre_completo']) . "</td>
-                        <td>{$row['correo']}</td>
-                        <td>$" . number_format($row['monto'], 0, ',', '.') . "</td>
-                        <td>" . ucfirst($row['banco']) . "</td>
-                        <td>{$row['referencia']}</td>
-                        <td class='estado-" . strtolower($row['estado']) . "'>" . ucfirst($row['estado']) . "</td>
-                        <td>" . date('d/m/Y H:i', strtotime($row['fecha'])) . "</td>
+                        <td>" . substr($rid, -8) . "</td>
+                        <td>" . htmlspecialchars($nombre) . "</td>
+                        <td>" . htmlspecialchars($correo) . "</td>
+                        <td>$" . number_format($row['monto'] ?? 0, 0, ',', '.') . "</td>
+                        <td>" . ucfirst($row['banco'] ?? '') . "</td>
+                        <td>" . htmlspecialchars($row['referencia'] ?? '') . "</td>
+                        <td class='estado-" . strtolower($row['estado'] ?? '') . "'>" . ucfirst($row['estado'] ?? '') . "</td>
+                        <td>{$fechaStr}</td>
                         <td>
-                            <a href='admin.php?action=aprobar&id={$row['id']}'><button class='boton-verde'>Aprobar</button></a>
-                            <a href='admin.php?action=eliminar&id={$row['id']}' onclick=\"return confirm('¿Eliminar esta recarga?');\"><button class='boton-rojo'>Eliminar</button></a>
+                            <a href='admin.php?action=aprobar&id={$rid}'><button class='boton-verde'>Aprobar</button></a>
+                            <a href='admin.php?action=eliminar&id={$rid}' onclick=\"return confirm('¿Eliminar esta recarga?');\"><button class='boton-rojo'>Eliminar</button></a>
                         </td>
                     </tr>";
             }
@@ -159,22 +161,26 @@ input, select {
         </thead>
         <tbody>
             <?php
-            $retiros = $conn->query("SELECT r.*, u.nombre_completo, u.correo 
-                                     FROM retiros r 
-                                     JOIN users u ON r.user_id = u.id 
-                                     WHERE r.estado = 'pendiente' ORDER BY r.fecha DESC");
-            while($row = $retiros->fetch_assoc()) {
+            $retiros = $db->retiros->find(['estado' => 'pendiente'], ['sort' => ['fecha' => -1]]);
+            foreach ($retiros as $row) {
+                $u = $db->users->findOne(['_id' => _id($row['user_id'])]);
+                $nombre = $u ? ($u['nombre_completo'] ?? '') : '';
+                $correo = $u ? ($u['correo'] ?? '') : '';
+                $rid = (string)$row['_id'];
+                $fechaStr = $row['fecha'] instanceof MongoDB\BSON\UTCDateTime
+                    ? $row['fecha']->toDateTime()->format('d/m/Y H:i')
+                    : (is_string($row['fecha'] ?? '') ? date('d/m/Y H:i', strtotime($row['fecha'])) : '');
                 echo "<tr>
-                        <td>{$row['id']}</td>
-                        <td>" . htmlspecialchars($row['nombre_completo']) . "</td>
-                        <td>{$row['correo']}</td>
-                        <td>$" . number_format($row['monto'], 0, ',', '.') . "</td>
-                        <td>{$row['banco']}</td>
-                        <td class='estado-" . strtolower($row['estado']) . "'>" . ucfirst($row['estado']) . "</td>
-                        <td>" . date('d/m/Y H:i', strtotime($row['fecha'])) . "</td>
+                        <td>" . substr($rid, -8) . "</td>
+                        <td>" . htmlspecialchars($nombre) . "</td>
+                        <td>" . htmlspecialchars($correo) . "</td>
+                        <td>$" . number_format($row['monto'] ?? 0, 0, ',', '.') . "</td>
+                        <td>" . htmlspecialchars($row['banco'] ?? '') . "</td>
+                        <td class='estado-" . strtolower($row['estado'] ?? '') . "'>" . ucfirst($row['estado'] ?? '') . "</td>
+                        <td>{$fechaStr}</td>
                         <td>
-                            <a href='admin.php?action=aprobar_retiro&id={$row['id']}'><button class='boton-verde'>Aprobar</button></a>
-                            <a href='admin.php?action=rechazar_retiro&id={$row['id']}' onclick=\"return confirm('¿Rechazar este retiro?');\"><button class='boton-rojo'>Rechazar</button></a>
+                            <a href='admin.php?action=aprobar_retiro&id={$rid}'><button class='boton-verde'>Aprobar</button></a>
+                            <a href='admin.php?action=rechazar_retiro&id={$rid}' onclick=\"return confirm('¿Rechazar este retiro?');\"><button class='boton-rojo'>Rechazar</button></a>
                         </td>
                     </tr>";
             }
@@ -185,19 +191,19 @@ input, select {
 
 <!-- Planes -->
 <?php
-// Conexión y acciones de planes
-$conexion = new mysqli("srv1922.hstgr.io", "u765282126_costeno", "1083041309Ll.", "u765282126_costeno");
-if ($conexion->connect_error) die("Error: " . $conexion->connect_error);
-
-if (isset($_POST['agregar'])) {
-    $stmt = $conexion->prepare("INSERT INTO planes_disponibles (nombre, porcentaje_diario, precio, duracion, unidad_duracion) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sddis", $_POST['nombre'], $_POST['porcentaje'], $_POST['precio'], $_POST['duracion'], $_POST['unidad']);
-    $stmt->execute(); $stmt->close();
+if (isset($_POST['agregar']) && !empty($_POST['nombre'])) {
+    $db->planes_disponibles->insertOne([
+        'nombre' => $_POST['nombre'],
+        'porcentaje_diario' => (float)($_POST['porcentaje'] ?? 0),
+        'precio' => (float)($_POST['precio'] ?? 0),
+        'duracion' => (int)($_POST['duracion'] ?? 0),
+        'unidad_duracion' => $_POST['unidad'] ?? 'dias'
+    ]);
 }
-if (isset($_POST['eliminar'])) {
-    $conexion->query("DELETE FROM planes_disponibles WHERE id = " . intval($_POST['plan_id']));
+if (isset($_POST['eliminar']) && !empty($_POST['plan_id'])) {
+    $db->planes_disponibles->deleteOne(['_id' => _id($_POST['plan_id'])]);
 }
-$planes = $conexion->query("SELECT * FROM planes_disponibles");
+$planes = $db->planes_disponibles->find([]);
 ?>
 
 <section>
@@ -219,22 +225,22 @@ $planes = $conexion->query("SELECT * FROM planes_disponibles");
             <tr><th>ID</th><th>Nombre</th><th>% Diario</th><th>Precio</th><th>Duración</th><th>Unidad</th><th>Acción</th></tr>
         </thead>
         <tbody>
-            <?php while ($plan = $planes->fetch_assoc()): ?>
+            <?php foreach ($planes as $plan): $pid = (string)($plan['_id'] ?? ''); ?>
             <tr>
-                <td><?= $plan['id'] ?></td>
-                <td><?= htmlspecialchars($plan['nombre']) ?></td>
-                <td><?= $plan['porcentaje_diario'] ?>%</td>
-                <td>$<?= number_format($plan['precio'], 2) ?></td>
-                <td><?= $plan['duracion'] ?></td>
-                <td><?= $plan['unidad_duracion'] ?></td>
+                <td><?= substr($pid, -8) ?></td>
+                <td><?= htmlspecialchars($plan['nombre'] ?? '') ?></td>
+                <td><?= $plan['porcentaje_diario'] ?? 0 ?>%</td>
+                <td>$<?= number_format($plan['precio'] ?? 0, 2) ?></td>
+                <td><?= $plan['duracion'] ?? 0 ?></td>
+                <td><?= $plan['unidad_duracion'] ?? 'dias' ?></td>
                 <td>
                     <form method="POST" style="display:inline;">
-                        <input type="hidden" name="plan_id" value="<?= $plan['id'] ?>">
+                        <input type="hidden" name="plan_id" value="<?= $pid ?>">
                         <button type="submit" name="eliminar" class="boton-rojo" onclick="return confirm('¿Eliminar este plan?')">Eliminar</button>
                     </form>
                 </td>
             </tr>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         </tbody>
     </table>
 </section>

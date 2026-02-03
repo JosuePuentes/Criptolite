@@ -2,48 +2,48 @@
 date_default_timezone_set('America/Bogota');
 require 'db.php';
 
-$planes_activos = $conn->query("SELECT * FROM compras WHERE activo = 1");
+$planes_activos = $db->compras->find(['activo' => 1]);
 
-while ($plan = $planes_activos->fetch_assoc()) {
-    $compra_id = $plan['id'];
+foreach ($planes_activos as $plan) {
+    $compra_id = $plan['_id'];
     $user_id = $plan['user_id'];
-    $ganancia_diaria = $plan['ganancia_diaria'];
-    $dias_transcurridos = $plan['dias_transcurridos'];
-    $duracion = $plan['duracion'];
-    $precio_invertido = $plan['precio'];
-    $unidad_duracion = $plan['unidad_duracion'];
-    $fecha_inicio = $plan['fecha_inicio'];
+    $ganancia_diaria = (float)($plan['ganancia_diaria'] ?? 0);
+    $dias_transcurridos = (int)($plan['dias_transcurridos'] ?? 0);
+    $duracion = (int)($plan['duracion'] ?? 0);
+    $precio_invertido = (float)($plan['precio'] ?? 0);
+    $unidad_duracion = $plan['unidad_duracion'] ?? 'dias';
+    $fecha_inicio = $plan['fecha_inicio'] ?? null;
 
     $fecha_actual = new DateTime();
-    $fecha_inicio_dt = new DateTime($fecha_inicio);
+    $fecha_inicio_dt = $fecha_inicio instanceof MongoDB\BSON\UTCDateTime
+        ? $fecha_inicio->toDateTime()
+        : new DateTime($fecha_inicio ?? 'now');
 
-    if ($unidad_duracion == 'minutos') {
+    if ($unidad_duracion === 'minutos') {
         $diferencia = $fecha_inicio_dt->diff($fecha_actual);
         $minutos_pasados = ($diferencia->days * 24 * 60) + ($diferencia->h * 60) + $diferencia->i;
         if ($minutos_pasados >= ($dias_transcurridos + 1)) {
-            // Sumar ganancia
-            $conn->query("UPDATE users SET saldo_disponible = saldo_disponible + $ganancia_diaria WHERE id = $user_id");
-            $conn->query("INSERT INTO historial_ganancias (user_id, compra_id, monto, fecha) VALUES ($user_id, $compra_id, $ganancia_diaria, NOW())");
-            $conn->query("UPDATE compras SET dias_transcurridos = dias_transcurridos + 1 WHERE id = $compra_id");
+            $db->users->updateOne(['_id' => _id($user_id)], ['$inc' => ['saldo_disponible' => $ganancia_diaria]]);
+            $db->historial_ganancias->insertOne(['user_id' => $user_id, 'compra_id' => (string)$compra_id, 'monto' => $ganancia_diaria, 'fecha' => new MongoDB\BSON\UTCDateTime()]);
+            $db->compras->updateOne(['_id' => $compra_id], ['$inc' => ['dias_transcurridos' => 1]]);
             echo "⏱️ Ganancia de minuto sumada para usuario $user_id (plan ID $compra_id)<br>";
         }
         if (($dias_transcurridos + 1) >= $duracion) {
-            $conn->query("UPDATE users SET saldo_capital = saldo_capital + $precio_invertido WHERE id = $user_id");
-            $conn->query("UPDATE compras SET activo = 0 WHERE id = $compra_id");
+            $db->users->updateOne(['_id' => _id($user_id)], ['$inc' => ['saldo_capital' => $precio_invertido]]);
+            $db->compras->updateOne(['_id' => $compra_id], ['$set' => ['activo' => 0]]);
             echo "🎯 Plan de minutos terminado, capital devuelto para usuario $user_id<br>";
         }
-    } else { // Caso normal de dias
+    } else {
         if ($dias_transcurridos < $duracion) {
-            $conn->query("UPDATE users SET saldo_disponible = saldo_disponible + $ganancia_diaria WHERE id = $user_id");
-            $conn->query("INSERT INTO historial_ganancias (user_id, compra_id, monto, fecha) VALUES ($user_id, $compra_id, $ganancia_diaria, NOW())");
-            $conn->query("UPDATE compras SET dias_transcurridos = dias_transcurridos + 1 WHERE id = $compra_id");
+            $db->users->updateOne(['_id' => _id($user_id)], ['$inc' => ['saldo_disponible' => $ganancia_diaria]]);
+            $db->historial_ganancias->insertOne(['user_id' => $user_id, 'compra_id' => (string)$compra_id, 'monto' => $ganancia_diaria, 'fecha' => new MongoDB\BSON\UTCDateTime()]);
+            $db->compras->updateOne(['_id' => $compra_id], ['$inc' => ['dias_transcurridos' => 1]]);
             echo "📅 Ganancia de día sumada para usuario $user_id (plan ID $compra_id)<br>";
         }
         if (($dias_transcurridos + 1) >= $duracion) {
-            $conn->query("UPDATE users SET saldo_capital = saldo_capital + $precio_invertido WHERE id = $user_id");
-            $conn->query("UPDATE compras SET activo = 0 WHERE id = $compra_id");
+            $db->users->updateOne(['_id' => _id($user_id)], ['$inc' => ['saldo_capital' => $precio_invertido]]);
+            $db->compras->updateOne(['_id' => $compra_id], ['$set' => ['activo' => 0]]);
             echo "🎯 Plan de días terminado, capital devuelto para usuario $user_id<br>";
         }
     }
 }
-?>

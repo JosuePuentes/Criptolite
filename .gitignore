@@ -1,4 +1,4 @@
-# Credenciales solo en local (producción usa variables de entorno)
+# Credenciales solo en local (producción usa MONGODB_URI)
 db.local.php
 
 # Sistema

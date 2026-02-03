@@ -1,14 +1,20 @@
-# Render (y cualquier host Docker): app PHP con nginx + PHP-FPM
+# Render / Docker: PHP + nginx + MongoDB (Atlas)
 FROM richarvey/nginx-php-fpm:3.1.6
 
-COPY . /var/www/html
+# Extensión MongoDB para PHP (Alpine)
+RUN apk add --no-cache php82-pecl-mongodb 2>/dev/null || apk add --no-cache php81-pecl-mongodb 2>/dev/null || true
 
-# Raíz de la app = raíz del repo (no hay carpeta public/)
+# Composer para mongodb/mongodb
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+WORKDIR /var/www/html
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --ignore-platform-reqs 2>/dev/null || true
+COPY . /var/www/html
+RUN composer install --no-dev --ignore-platform-reqs 2>/dev/null || true
+
 ENV SKIP_COMPOSER 1
 ENV WEBROOT /var/www/html
 ENV PHP_ERRORS_STDERR 1
-
-# Render expone el puerto 80; la imagen ya escucha en 80
 EXPOSE 80
-
 CMD ["/start.sh"]

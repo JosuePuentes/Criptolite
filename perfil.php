@@ -2,23 +2,24 @@
 session_start();
 include('db.php');
 
-// Verificar si está logueado
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
+$user = $db->users->findOne(['_id' => _id($user_id)]);
+if (!$user) {
+    header("Location: index.php");
+    exit();
+}
+$nombre = $user['nombre_completo'] ?? '';
+$celular = $user['celular'] ?? '';
+$correo = $user['correo'] ?? '';
+$cedula = $user['cedula'] ?? '';
+$banco = $user['banco'] ?? '';
+$cuenta_banco = $user['cuenta_banco'] ?? '';
 
-// Obtener información actual del usuario
-$stmt = $conn->prepare("SELECT nombre_completo, celular, correo, cedula, banco, cuenta_banco FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$stmt->bind_result($nombre, $celular, $correo, $cedula, $banco, $cuenta_banco);
-$stmt->fetch();
-$stmt->close();
-
-// Procesar actualización
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nuevo_nombre = trim($_POST['nombre']);
     $nuevo_celular = trim($_POST['celular']);
@@ -28,20 +29,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nueva_cuenta = trim($_POST['cuenta_banco']);
     $nuevo_password = !empty($_POST['password']) ? password_hash($_POST['password'], PASSWORD_BCRYPT) : null;
 
-    if ($nuevo_password) {
-        $stmt = $conn->prepare("UPDATE users SET nombre_completo = ?, celular = ?, correo = ?, cedula = ?, banco = ?, cuenta_banco = ?, password = ? WHERE id = ?");
-        $stmt->bind_param("sssssssi", $nuevo_nombre, $nuevo_celular, $nuevo_correo, $nueva_cedula, $nuevo_banco, $nueva_cuenta, $nuevo_password, $user_id);
-    } else {
-        $stmt = $conn->prepare("UPDATE users SET nombre_completo = ?, celular = ?, correo = ?, cedula = ?, banco = ?, cuenta_banco = ? WHERE id = ?");
-        $stmt->bind_param("ssssssi", $nuevo_nombre, $nuevo_celular, $nuevo_correo, $nueva_cedula, $nuevo_banco, $nueva_cuenta, $user_id);
-    }
+    $set = [
+        'nombre_completo' => $nuevo_nombre,
+        'celular' => $nuevo_celular,
+        'correo' => $nuevo_correo,
+        'cedula' => $nueva_cedula,
+        'banco' => $nuevo_banco,
+        'cuenta_banco' => $nueva_cuenta
+    ];
+    if ($nuevo_password) $set['password'] = $nuevo_password;
 
-    if ($stmt->execute()) {
-        header("Location: perfil.php?actualizado=ok");
-        exit();
-    } else {
-        echo "Error al actualizar. Intenta de nuevo.";
-    }
+    $db->users->updateOne(['_id' => _id($user_id)], ['$set' => $set]);
+    header("Location: perfil.php?actualizado=ok");
+    exit();
 }
 ?>
 

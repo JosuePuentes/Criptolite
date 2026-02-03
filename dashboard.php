@@ -8,13 +8,15 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
-
-$stmt = $conn->prepare("SELECT nombre_completo, saldo_capital, saldo_disponible FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$stmt->bind_result($nombre, $capital, $disponible);
-$stmt->fetch();
-$stmt->close();
+$user = $db->users->findOne(['_id' => _id($user_id)]);
+if (!$user) {
+    session_destroy();
+    header("Location: index.php");
+    exit();
+}
+$nombre = $user['nombre_completo'] ?? '';
+$capital = $user['saldo_capital'] ?? 0;
+$disponible = $user['saldo_disponible'] ?? 0;
 ?>
 
 <!DOCTYPE html>

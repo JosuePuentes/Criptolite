@@ -4,45 +4,59 @@ date_default_timezone_set('America/Bogota');
 require 'db.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: index.php');
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
 
 function calcularTiempos($fecha_inicio, $dias_transcurridos, $duracion) {
-    $proxima_ganancia = strtotime($fecha_inicio) + (($dias_transcurridos + 1) * 24 * 60 * 60);
-    $fin_plan = strtotime($fecha_inicio) + ($duracion * 24 * 60 * 60);
+    $ts = $fecha_inicio instanceof MongoDB\BSON\UTCDateTime
+        ? $fecha_inicio->toDateTime()->getTimestamp()
+        : (is_numeric($fecha_inicio) ? $fecha_inicio : strtotime($fecha_inicio));
     return [
-        'proxima_ganancia' => $proxima_ganancia,
-        'fin_plan' => $fin_plan
+        'proxima_ganancia' => $ts + (($dias_transcurridos + 1) * 24 * 60 * 60),
+        'fin_plan' => $ts + ($duracion * 24 * 60 * 60)
     ];
 }
 
 if (isset($_POST['comprar_plan_id'])) {
-    $plan_id = intval($_POST['comprar_plan_id']);
-    $query_plan = $conn->query("SELECT * FROM planes_disponibles WHERE id = $plan_id");
-    $plan = $query_plan->fetch_assoc();
+    $plan_id = $_POST['comprar_plan_id'];
+    $plan = $db->planes_disponibles->findOne(['_id' => _id($plan_id)]);
 
     if ($plan) {
-        $query_user = $conn->query("SELECT saldo_capital FROM users WHERE id = $user_id");
-        $user = $query_user->fetch_assoc();
+        $user = $db->users->findOne(['_id' => _id($user_id)]);
+        $saldo = $user['saldo_capital'] ?? 0;
+        $precio = (float)($plan['precio'] ?? 0);
 
-        if ($user['saldo_capital'] >= $plan['precio']) {
-            $ganancia_diaria = $plan['precio'] * ($plan['porcentaje_diario'] / 100);
-            $stmt = $conn->prepare("INSERT INTO compras (user_id, plan_id, plan_nombre, porcentaje_diario, ganancia_diaria, precio, duracion, fecha_inicio) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("iissddi", $user_id, $plan['id'], $plan['nombre'], $plan['porcentaje_diario'], $ganancia_diaria, $plan['precio'], $plan['duracion']);
-            $stmt->execute();
-            $conn->query("UPDATE users SET saldo_capital = saldo_capital - {$plan['precio']} WHERE id = $user_id");
-            echo "<script>alert('¡Plan comprado exitosamente!');window.location='planes.php';</script>";
+        if ($saldo >= $precio) {
+            $ganancia_diaria = $precio * ((float)($plan['porcentaje_diario'] ?? 0) / 100);
+            $db->compras->insertOne([
+                'user_id' => $user_id,
+                'plan_id' => $plan_id,
+                'plan_nombre' => $plan['nombre'] ?? '',
+                'porcentaje_diario' => $plan['porcentaje_diario'] ?? 0,
+                'ganancia_diaria' => $ganancia_diaria,
+                'precio' => $precio,
+                'duracion' => (int)($plan['duracion'] ?? 0),
+                'fecha_inicio' => new MongoDB\BSON\UTCDateTime(),
+                'activo' => 1,
+                'dias_transcurridos' => 0
+            ]);
+            $db->users->updateOne(
+                ['_id' => _id($user_id)],
+                ['$inc' => ['saldo_capital' => -$precio]]
+            );
+            echo "<script>alert('¡Plan comprado exitosamente!');window.location='plan.php';</script>";
         } else {
             echo "<script>alert('No tienes saldo suficiente para este plan.');</script>";
         }
     }
 }
 
-$planes_disponibles = $conn->query("SELECT * FROM planes_disponibles");
-$planes_activos = $conn->query("SELECT * FROM compras WHERE user_id = $user_id AND activo = 1");
+$planes_disponibles = $db->planes_disponibles->find([]);
+$planes_activos_cursor = $db->compras->find(['user_id' => $user_id, 'activo' => 1]);
+$planes_activos_list = iterator_to_array($planes_activos_cursor);
 ?>
 
 <!DOCTYPE html>
@@ -172,35 +186,35 @@ button:hover {
     <!-- PLANES DISPONIBLES -->
     <div class="section">
         <h2>Planes Disponibles</h2>
-        <?php while ($plan = $planes_disponibles->fetch_assoc()): ?>
+        <?php foreach ($planes_disponibles as $plan): ?>
             <div class="card">
-                <strong><?= htmlspecialchars($plan['nombre']) ?></strong><br><br>
-                Precio: $<?= number_format($plan['precio'], 2) ?><br>
-                Ganancia diaria: <?= $plan['porcentaje_diario'] ?>%<br>
-                Duración: <?= $plan['duracion'] ?> días
+                <strong><?= htmlspecialchars($plan['nombre'] ?? '') ?></strong><br><br>
+                Precio: $<?= number_format($plan['precio'] ?? 0, 2) ?><br>
+                Ganancia diaria: <?= $plan['porcentaje_diario'] ?? 0 ?>%<br>
+                Duración: <?= $plan['duracion'] ?? 0 ?> días
                 <form method="POST" style="margin-top: 10px;">
-                    <input type="hidden" name="comprar_plan_id" value="<?= $plan['id'] ?>">
+                    <input type="hidden" name="comprar_plan_id" value="<?= (string)($plan['_id'] ?? '') ?>">
                     <button type="submit">Comprar Plan</button>
                 </form>
             </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </div>
 
     <!-- PLANES ACTIVOS -->
     <div class="section">
         <h2>Mis Planes Activos</h2>
-        <?php if ($planes_activos->num_rows > 0): ?>
-            <?php while ($compra = $planes_activos->fetch_assoc()): ?>
-                <?php $tiempos = calcularTiempos($compra['fecha_inicio'], $compra['dias_transcurridos'], $compra['duracion']); ?>
+        <?php if (count($planes_activos_list) > 0): ?>
+            <?php foreach ($planes_activos_list as $compra): ?>
+                <?php $tiempos = calcularTiempos($compra['fecha_inicio'] ?? null, $compra['dias_transcurridos'] ?? 0, $compra['duracion'] ?? 0); $cid = (string)($compra['_id'] ?? ''); ?>
                 <div class="card">
-                    <strong><?= htmlspecialchars($compra['plan_nombre']) ?></strong><br><br>
-                    Inversión: $<?= number_format($compra['precio'], 2) ?><br>
-                    Ganancia Diaria: $<?= number_format($compra['ganancia_diaria'], 2) ?><br>
-                    Duración: <?= $compra['duracion'] ?> días<br>
-                    Días Transcurridos: <?= $compra['dias_transcurridos'] ?><br>
-                    <div class="contador" id="contador_<?= $compra['id'] ?>"></div>
+                    <strong><?= htmlspecialchars($compra['plan_nombre'] ?? '') ?></strong><br><br>
+                    Inversión: $<?= number_format($compra['precio'] ?? 0, 2) ?><br>
+                    Ganancia Diaria: $<?= number_format($compra['ganancia_diaria'] ?? 0, 2) ?><br>
+                    Duración: <?= $compra['duracion'] ?? 0 ?> días<br>
+                    Días Transcurridos: <?= $compra['dias_transcurridos'] ?? 0 ?><br>
+                    <div class="contador" id="contador_<?= $cid ?>"></div>
                     <script>
-                        function actualizarContador<?= $compra['id'] ?>() {
+                        function actualizarContador_<?= preg_replace('/[^a-z0-9]/', '_', $cid) ?>() {
                             var ahora = new Date().getTime();
                             var proxima_ganancia = <?= $tiempos['proxima_ganancia'] * 1000 ?>;
                             var fin_plan = <?= $tiempos['fin_plan'] * 1000 ?>;
@@ -218,14 +232,14 @@ button:hover {
                             var dias_f = Math.floor(faltan_fin / (1000 * 60 * 60 * 24));
                             var horas_f = Math.floor((faltan_fin % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
-                            document.getElementById("contador_<?= $compra['id'] ?>").innerHTML =
+                            document.getElementById("contador_<?= $cid ?>").innerHTML =
                                 "Próxima ganancia en: " + horas_g + "h " + minutos_g + "m " + segundos_g + "s<br>" +
                                 "Fin del plan en: " + dias_f + " días " + horas_f + " horas";
                         }
-                        setInterval(actualizarContador<?= $compra['id'] ?>, 1000);
+                        setInterval(actualizarContador_<?= preg_replace('/[^a-z0-9]/', '_', $cid) ?>, 1000);
                     </script>
                 </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         <?php else: ?>
             <p style="text-align: center;">No tienes planes activos.</p>
         <?php endif; ?>

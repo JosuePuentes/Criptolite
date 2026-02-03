@@ -9,21 +9,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $celular = trim($_POST['celular']);
     $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT id, password FROM users WHERE celular = ?");
-    $stmt->bind_param("s", $celular);
-    $stmt->execute();
-    $stmt->store_result();
+    $user = $db->users->findOne(['celular' => $celular]);
 
-    if ($stmt->num_rows > 0) {
-        $stmt->bind_result($id, $hash_password);
-        $stmt->fetch();
-        if (password_verify($password, $hash_password)) {
-            $_SESSION['user_id'] = $id;
-            header("Location: dashboard.php");
-            exit();
-        } else {
-            $mensaje = "Contraseña incorrecta.";
-        }
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = (string) $user['_id'];
+        header("Location: dashboard.php");
+        exit();
+    }
+    if ($user) {
+        $mensaje = "Contraseña incorrecta.";
     } else {
         $mensaje = "Número de celular no encontrado.";
     }

@@ -283,15 +283,18 @@ function validarFormulario() {
         </tr>
         <?php
 $user_id = $_SESSION['user_id'];
-$resultado = $conn->query("SELECT * FROM recargas WHERE user_id = '$user_id' ORDER BY fecha DESC");
-while($row = $resultado->fetch_assoc()) {
-    $estado_clase = "estado-" . strtolower($row['estado']);
+$resultado = $db->recargas->find(['user_id' => $user_id], ['sort' => ['fecha' => -1]]);
+foreach ($resultado as $row) {
+    $estado_clase = "estado-" . strtolower($row['estado'] ?? '');
+    $fechaStr = $row['fecha'] instanceof MongoDB\BSON\UTCDateTime
+        ? $row['fecha']->toDateTime()->format('d/m/Y H:i')
+        : (is_string($row['fecha'] ?? '') ? date('d/m/Y H:i', strtotime($row['fecha'])) : '');
     echo "<tr class='fila-recarga'>
             <td>$" . number_format($row['monto'], 0, ',', '.') . "</td>
-            <td>" . ucfirst($row['banco']) . "</td>
-            <td>" . htmlspecialchars($row['referencia']) . "</td>
-            <td class='$estado_clase'>" . ucfirst($row['estado']) . "</td>
-            <td>" . date('d/m/Y H:i', strtotime($row['fecha'])) . "</td>
+            <td>" . ucfirst($row['banco'] ?? '') . "</td>
+            <td>" . htmlspecialchars($row['referencia'] ?? '') . "</td>
+            <td class='$estado_clase'>" . ucfirst($row['estado'] ?? '') . "</td>
+            <td>" . $fechaStr . "</td>
           </tr>";
 }
 ?>

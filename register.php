@@ -3,33 +3,38 @@ include('db.php');
 
 $mensaje = '';
 
-// Capturar el referido desde URL si existe
-$referido_url = isset($_GET['referido']) ? intval($_GET['referido']) : '';
+$referido_url = isset($_GET['referido']) ? trim($_GET['referido']) : '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nombre = trim($_POST['nombre']);
     $celular = trim($_POST['celular']);
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-    $referido = !empty($_POST['referido']) ? intval($_POST['referido']) : NULL;
+    $referido = !empty($_POST['referido']) ? trim($_POST['referido']) : null;
 
-    // Verificar si ya existe el celular
-    $check = $conn->prepare("SELECT id FROM users WHERE celular = ?");
-    $check->bind_param("s", $celular);
-    $check->execute();
-    $check->store_result();
+    $existente = $db->users->findOne(['celular' => $celular]);
 
-    if ($check->num_rows > 0) {
+    if ($existente) {
         $mensaje = "El número de celular ya está registrado.";
     } else {
-        // Insertar nuevo usuario
-        $stmt = $conn->prepare("INSERT INTO users (nombre_completo, celular, password, referido_por) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("sssi", $nombre, $celular, $password, $referido);
-        if ($stmt->execute()) {
+        $doc = [
+            'nombre_completo' => $nombre,
+            'celular' => $celular,
+            'password' => $password,
+            'referido_por' => $referido,
+            'saldo_capital' => 0,
+            'saldo_disponible' => 0,
+            'bono_reclamado' => 0,
+            'correo' => '',
+            'cedula' => '',
+            'banco' => '',
+            'cuenta_banco' => ''
+        ];
+        $result = $db->users->insertOne($doc);
+        if ($result->getInsertedId()) {
             header("Location: index.php?registro=ok");
             exit();
-        } else {
-            $mensaje = "Error al registrar. Intenta de nuevo.";
         }
+        $mensaje = "Error al registrar. Intenta de nuevo.";
     }
 }
 ?>

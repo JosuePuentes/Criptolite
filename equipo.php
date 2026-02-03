@@ -11,40 +11,17 @@ if (!isset($_SESSION['user_id'])) {
 // Obtener datos del usuario
 $user_id = $_SESSION['user_id'];
 
-// Obtener datos de referidos
-$stmt = $conn->prepare("
-    SELECT u.id, u.nombre_completo, u.celular, u.saldo_capital, u.saldo_disponible
-    FROM users u
-    WHERE u.referido_por = ?
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$resultado = $stmt->get_result();
-
 $referidos = [];
-$referidos_activos = 0; // Contador de referidos con plan activo
+$referidos_activos = 0;
 
-while ($row = $resultado->fetch_assoc()) {
-    // Verificar si el referido tiene un plan activo
-    $stmt2 = $conn->prepare("
-        SELECT COUNT(*) 
-        FROM compras 
-        WHERE user_id = ? AND activo = 1
-    ");
-    $stmt2->bind_param("i", $row['id']);
-    $stmt2->execute();
-    $stmt2->bind_result($planes_activos);
-    $stmt2->fetch();
-    $stmt2->close();
-    
-    $row['planes_activos'] = $planes_activos;
-    if ($planes_activos > 0) {
-        $referidos_activos++;
-    }
-    
+$cursor = $db->users->find(['referido_por' => $user_id]);
+foreach ($cursor as $row) {
+    $row['id'] = (string)$row['_id'];
+    $count = $db->compras->countDocuments(['user_id' => (string)$row['_id'], 'activo' => 1]);
+    $row['planes_activos'] = $count;
+    if ($count > 0) $referidos_activos++;
     $referidos[] = $row;
 }
-$stmt->close();
 ?>
 
 <!DOCTYPE html>

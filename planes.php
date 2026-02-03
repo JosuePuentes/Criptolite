@@ -11,20 +11,32 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 if (isset($_POST['comprar_plan_id'])) {
-    $plan_id = intval($_POST['comprar_plan_id']);
-    $query_plan = $conn->query("SELECT * FROM planes_disponibles WHERE id = $plan_id");
-    $plan = $query_plan->fetch_assoc();
+    $plan_id = $_POST['comprar_plan_id'];
+    $plan = $db->planes_disponibles->findOne(['_id' => _id($plan_id)]);
 
     if ($plan) {
-        $query_user = $conn->query("SELECT saldo_capital FROM users WHERE id = $user_id");
-        $user = $query_user->fetch_assoc();
+        $user = $db->users->findOne(['_id' => _id($user_id)]);
+        $saldo = $user['saldo_capital'] ?? 0;
+        $precio = (float)($plan['precio'] ?? 0);
 
-        if ($user['saldo_capital'] >= $plan['precio']) {
-            $ganancia_diaria = $plan['precio'] * ($plan['porcentaje_diario'] / 100);
-            $stmt = $conn->prepare("INSERT INTO compras (user_id, plan_id, plan_nombre, porcentaje_diario, ganancia_diaria, precio, duracion, fecha_inicio, activo, dias_transcurridos) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 1, 0)");
-            $stmt->bind_param("iissddi", $user_id, $plan['id'], $plan['nombre'], $plan['porcentaje_diario'], $ganancia_diaria, $plan['precio'], $plan['duracion']);
-            $stmt->execute();
-            $conn->query("UPDATE users SET saldo_capital = saldo_capital - {$plan['precio']} WHERE id = $user_id");
+        if ($saldo >= $precio) {
+            $ganancia_diaria = $precio * ((float)($plan['porcentaje_diario'] ?? 0) / 100);
+            $db->compras->insertOne([
+                'user_id' => $user_id,
+                'plan_id' => $plan_id,
+                'plan_nombre' => $plan['nombre'] ?? '',
+                'porcentaje_diario' => $plan['porcentaje_diario'] ?? 0,
+                'ganancia_diaria' => $ganancia_diaria,
+                'precio' => $precio,
+                'duracion' => (int)($plan['duracion'] ?? 0),
+                'fecha_inicio' => new MongoDB\BSON\UTCDateTime(),
+                'activo' => 1,
+                'dias_transcurridos' => 0
+            ]);
+            $db->users->updateOne(
+                ['_id' => _id($user_id)],
+                ['$inc' => ['saldo_capital' => -$precio]]
+            );
             echo "<script>alert('¡Plan comprado exitosamente!');window.location='planes.php';</script>";
         } else {
             echo "<script>alert('No tienes saldo suficiente para este plan.');</script>";
@@ -32,8 +44,8 @@ if (isset($_POST['comprar_plan_id'])) {
     }
 }
 
-$planes_disponibles = $conn->query("SELECT * FROM planes_disponibles");
-$planes_activos = $conn->query("SELECT * FROM compras WHERE user_id = $user_id AND activo = 1");
+$planes_disponibles = $db->planes_disponibles->find([]);
+$planes_activos = $db->compras->find(['user_id' => $user_id, 'activo' => 1]);
 ?>
 
 <!DOCTYPE html>
@@ -161,14 +173,14 @@ button:hover {
 <div class="contenedor">
     <div class="section">
         <h2>Planes Disponibles</h2>
-        <?php while ($plan = $planes_disponibles->fetch_assoc()): ?>
+        <?php foreach ($planes_disponibles as $plan): ?>
             <div class="card">
                 <strong><?= htmlspecialchars($plan['nombre']) ?></strong><br><br>
                 Precio: $<?= number_format($plan['precio'], 2) ?><br>
                 Ganancia diaria: <?= $plan['porcentaje_diario'] ?>%<br>
                 Duración: <?= $plan['duracion'] ?> días
                 <form method="POST" style="margin-top: 10px;">
-                    <input type="hidden" name="comprar_plan_id" value="<?= $plan['id'] ?>">
+                    <input type="hidden" name="comprar_plan_id" value="<?= (string)($plan['_id'] ?? '') ?>">
                     <button type="submit">Comprar Plan</button>
                 </form>
             </div>
@@ -177,8 +189,8 @@ button:hover {
 
     <div class="section">
         <h2>Mis planes activos</h2>
-        <?php if ($planes_activos->num_rows > 0): ?>
-            <?php while ($compra = $planes_activos->fetch_assoc()): ?>
+        <?php $planes_activos_list = iterator_to_array($planes_activos); if (count($planes_activos_list) > 0): ?>
+            <?php foreach ($planes_activos as $compra): ?>
                 <div class="card">
                     <strong><?= htmlspecialchars($compra['plan_nombre']) ?></strong><br><br>
                     Inversión: $<?= number_format($compra['precio'], 2) ?><br>
@@ -186,7 +198,7 @@ button:hover {
                     Duración: <?= $compra['duracion'] ?> días<br>
                     Días Transcurridos: <?= $compra['dias_transcurridos'] ?><br>
                 </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         <?php else: ?>
             <p style="text-align: center;">No tienes planes activos.</p>
         <?php endif; ?>
