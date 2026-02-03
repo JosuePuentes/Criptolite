@@ -29,6 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/img/favicon.ico" type="image/png">
 <title>Login</title>
 
 <style>
@@ -38,7 +39,7 @@ body {
     font-family: 'Arial', sans-serif;
 
     /* ✅ Fondo con imagen activa */
-    background: url('/img/fondologin.jpg') no-repeat center center fixed;
+    background: url('/img/fondologin.jpg.png') no-repeat center center fixed;
     background-size: cover;
 
     color: white;
