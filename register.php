@@ -1,41 +1,44 @@
 <?php
-include('db.php');
-
 $mensaje = '';
-
 $referido_url = isset($_GET['referido']) ? trim($_GET['referido']) : '';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = trim($_POST['nombre']);
-    $celular = trim($_POST['celular']);
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-    $referido = !empty($_POST['referido']) ? trim($_POST['referido']) : null;
+try {
+    include('db.php');
 
-    $existente = $db->users->findOne(['celular' => $celular]);
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $nombre = trim($_POST['nombre'] ?? '');
+        $celular = trim($_POST['celular'] ?? '');
+        $password = password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT);
+        $referido = !empty($_POST['referido']) ? trim($_POST['referido']) : null;
 
-    if ($existente) {
-        $mensaje = "El número de celular ya está registrado.";
-    } else {
-        $doc = [
-            'nombre_completo' => $nombre,
-            'celular' => $celular,
-            'password' => $password,
-            'referido_por' => $referido,
-            'saldo_capital' => 0,
-            'saldo_disponible' => 0,
-            'bono_reclamado' => 0,
-            'correo' => '',
-            'cedula' => '',
-            'banco' => '',
-            'cuenta_banco' => ''
-        ];
-        $result = $db->users->insertOne($doc);
-        if ($result->getInsertedId()) {
-            header("Location: index.php?registro=ok");
-            exit();
+        $existente = $db->users->findOne(['celular' => $celular]);
+
+        if ($existente) {
+            $mensaje = "El número de celular ya está registrado.";
+        } else {
+            $doc = [
+                'nombre_completo' => $nombre,
+                'celular' => $celular,
+                'password' => $password,
+                'referido_por' => $referido,
+                'saldo_capital' => 0,
+                'saldo_disponible' => 0,
+                'bono_reclamado' => 0,
+                'correo' => '',
+                'cedula' => '',
+                'banco' => '',
+                'cuenta_banco' => ''
+            ];
+            $result = $db->users->insertOne($doc);
+            if ($result->getInsertedId()) {
+                header("Location: index.php?registro=ok");
+                exit();
+            }
+            $mensaje = "Error al registrar. Intenta de nuevo.";
         }
-        $mensaje = "Error al registrar. Intenta de nuevo.";
     }
+} catch (Throwable $e) {
+    $mensaje = "No se pudo conectar. Intenta más tarde o regístrate en criptolite.onrender.com";
 }
 ?>
 

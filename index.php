@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="/img/favicon.ico" type="image/png">
+<link rel="icon" href="/img/favicon.ico.png" type="image/png">
 <title>Login</title>
 
 <style>
@@ -127,7 +127,7 @@ p a:hover {
 
 <div class="contenedor">
     <h1></h1>
-    <?php if ($mensaje != '') { echo "<p style='color:red;'>$mensaje</p>"; } ?>
+    <?php if ($mensaje != '') { echo '<p style="color:red; font-weight:bold;">' . htmlspecialchars($mensaje) . '</p>'; } ?>
     <form method="POST">
         <input type="text" name="celular" placeholder="Número de celular" required>
         <input type="password" name="password" placeholder="Contraseña" required>
