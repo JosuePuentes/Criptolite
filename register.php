@@ -145,7 +145,7 @@ p a:hover {
 
 <div class="contenedor">
     <h1></h1>
-    <?php if ($mensaje != '') { echo "<p style='color:red;'>$mensaje</p>"; } ?>
+    <?php if ($mensaje != '') { echo '<p style="color:red; font-weight:bold; margin-bottom:15px;">' . htmlspecialchars($mensaje) . '</p>'; } ?>
     <form method="POST">
         <input type="text" name="nombre" placeholder="Nombre completo" required>
         <input type="text" name="celular" placeholder="Número de celular" required>
