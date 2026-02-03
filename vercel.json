@@ -1,19 +1,19 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.php", "use": "vercel-php@0.6.1" },
-    { "src": "register.php", "use": "vercel-php@0.6.1" },
-    { "src": "dashboard.php", "use": "vercel-php@0.6.1" },
-    { "src": "logout.php", "use": "vercel-php@0.6.1" },
-    { "src": "perfil.php", "use": "vercel-php@0.6.1" },
-    { "src": "plan.php", "use": "vercel-php@0.6.1" },
-    { "src": "planes.php", "use": "vercel-php@0.6.1" },
-    { "src": "recarga.php", "use": "vercel-php@0.6.1" },
-    { "src": "retirar.php", "use": "vercel-php@0.6.1" },
-    { "src": "equipo.php", "use": "vercel-php@0.6.1" },
-    { "src": "admin.php", "use": "vercel-php@0.6.1" },
-    { "src": "procesar_recarga.php", "use": "vercel-php@0.6.1" },
-    { "src": "reclamar_bono.php", "use": "vercel-php@0.6.1" }
+    { "src": "index.php", "use": "vercel-php@0.7.3" },
+    { "src": "register.php", "use": "vercel-php@0.7.3" },
+    { "src": "dashboard.php", "use": "vercel-php@0.7.3" },
+    { "src": "logout.php", "use": "vercel-php@0.7.3" },
+    { "src": "perfil.php", "use": "vercel-php@0.7.3" },
+    { "src": "plan.php", "use": "vercel-php@0.7.3" },
+    { "src": "planes.php", "use": "vercel-php@0.7.3" },
+    { "src": "recarga.php", "use": "vercel-php@0.7.3" },
+    { "src": "retirar.php", "use": "vercel-php@0.7.3" },
+    { "src": "equipo.php", "use": "vercel-php@0.7.3" },
+    { "src": "admin.php", "use": "vercel-php@0.7.3" },
+    { "src": "procesar_recarga.php", "use": "vercel-php@0.7.3" },
+    { "src": "reclamar_bono.php", "use": "vercel-php@0.7.3" }
   ],
   "rewrites": [
     { "source": "/", "destination": "/index.php" }
