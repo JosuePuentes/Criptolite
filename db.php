@@ -14,7 +14,12 @@ if (empty($uri)) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$mongoClient = new MongoDB\Client($uri);
+try {
+    $mongoClient = new MongoDB\Client($uri, [], ['serverSelectionTimeoutMS' => 10000]);
+} catch (Throwable $e) {
+    error_log('[Criptolite] MongoDB conexión: ' . $e->getMessage());
+    throw $e;
+}
 $dbName = getenv('MONGODB_DB_NAME');
 if (empty($dbName)) {
     $path = parse_url($uri, PHP_URL_PATH);

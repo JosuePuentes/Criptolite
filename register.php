@@ -38,6 +38,7 @@ try {
         }
     }
 } catch (Throwable $e) {
+    error_log('[Criptolite] Error registro/conexión: ' . $e->getMessage());
     $mensaje = "No se pudo conectar. Intenta más tarde o regístrate en criptolite.onrender.com";
 }
 ?>
