@@ -1,5 +1,5 @@
-# Credenciales: no subir la base de datos real
-db.php
+# Credenciales solo en local (producción usa variables de entorno)
+db.local.php
 
 # Sistema
 .DS_Store

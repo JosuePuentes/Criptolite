@@ -1,0 +1,19 @@
+# Render Blueprint: un solo servicio web PHP.
+# En el dashboard de Render puedes crear además una base MySQL y enlazarla.
+# No hace falta indicar "frontend" ni "backend": toda la app es un solo servicio.
+
+services:
+  - type: web
+    name: criptolite
+    runtime: docker
+    # Variables de entorno (añádelas en el dashboard o aquí con envVarGroups):
+    # DB_HOST, DB_USER, DB_PASS, DB_NAME
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false

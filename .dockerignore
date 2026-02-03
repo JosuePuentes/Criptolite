@@ -1,0 +1,8 @@
+.git
+.gitignore
+README.md
+*.md
+db.local.php
+.env
+.env.*
+.DS_Store
