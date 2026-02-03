@@ -1,0 +1,17 @@
+# Credenciales: no subir la base de datos real
+db.php
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Archivos de texto sueltos (opcional)
+# *.txt
