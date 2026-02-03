@@ -1,25 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "img/**", "use": "@vercel/static" },
-    { "src": "assets/**", "use": "@vercel/static" },
-    { "src": "index.php", "use": "vercel-php@0.7.3" },
-    { "src": "register.php", "use": "vercel-php@0.7.3" },
-    { "src": "dashboard.php", "use": "vercel-php@0.7.3" },
-    { "src": "logout.php", "use": "vercel-php@0.7.3" },
-    { "src": "perfil.php", "use": "vercel-php@0.7.3" },
-    { "src": "plan.php", "use": "vercel-php@0.7.3" },
-    { "src": "planes.php", "use": "vercel-php@0.7.3" },
-    { "src": "recarga.php", "use": "vercel-php@0.7.3" },
-    { "src": "retirar.php", "use": "vercel-php@0.7.3" },
-    { "src": "equipo.php", "use": "vercel-php@0.7.3" },
-    { "src": "admin.php", "use": "vercel-php@0.7.3" },
-    { "src": "procesar_recarga.php", "use": "vercel-php@0.7.3" },
-    { "src": "reclamar_bono.php", "use": "vercel-php@0.7.3" },
-    { "src": "crear_admin.php", "use": "vercel-php@0.7.3" }
-  ],
   "rewrites": [
-    { "source": "/", "destination": "/index.php" },
-    { "source": "/favicon.ico", "destination": "/img/favicon.ico.png" }
+    {
+      "source": "/(.*)",
+      "destination": "https://criptolite.onrender.com/$1"
+    }
   ]
 }
